@@ -1,0 +1,794 @@
+#!/usr/bin/python
+#-*-coding:utf-8-*-
+# 监控服务
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import lib
+import time,json
+# /home/fault_detection
+
+'''
+memcache 	连接是否超时 读数据 写数据 
+redis 		连接是否超时 读数据 写数据 
+数据库 		连接是否超时 读数据 写数据 
+
+'''
+
+
+'''
+
+python-memcached 扩展
+wget https://pypi.python.org/packages/f7/62/14b2448cfb04427366f24104c9da97cf8ea380d7258a3233f066a951a8d8/python-memcached-1.58.tar.gz#md5=23b258105013d14d899828d334e6b044
+tar -zxvf python-memcached-1.58.tar.gz
+cd python-memcached-1.58
+python setup.py install
+
+python-redis 扩展
+wget https://pypi.python.org/packages/source/r/redis/redis-2.9.1.tar.gz
+tar xvzf redis-2.9.1.tar.gz
+cd redis-2.9.1
+python setup.py install
+
+python-mysql 扩展
+wget https://pypi.python.org/packages/9a/81/924d6799494cf7fb24370335c2f782088d6ac4f79e4137d4df94cea3582c/MySQL-python-1.2.3.tar.gz#md5=215eddb6d853f6f4be5b4afc4154292f
+tar xvzf MySQL-python-1.2.3.tar.gz
+cd MySQL-python-1.2.3
+python setup.py install
+
+可能出现的错误
+1）mysql_config: command not found
+
+	find / -name mysql_config 
+	/usr/local/mysql-5.0.67/bin/mysql_config
+	setup_posix.py
+	mysql_config.path = "/usr/local/mysql-5.0.67/bin/mysql_config"
+
+2）error: command 'gcc' failed with exit status 1
+yum install python-devel
+
+
+
+'''
+
+#输出
+def dump(var):
+    if var:
+        if isinstance(var,list) or isinstance(var,tuple) :
+            for x in var:
+                print x
+                pass
+            pass
+        if isinstance(var,dict):
+            for x in var:
+                print str(x) + ' : ' + str(var[x])
+                # print var[x]
+                pass
+            pass
+
+#获取php配置
+def php_config(file_path):
+	config = {}
+	f = open(file_path,"r")  
+	lines = f.readlines()
+	for line in lines:
+		if line.find('=>')!=-1:
+			line = line.replace("'",'')
+			line = line.replace('"','')
+			line = line.replace(',','')
+			line = line.strip()
+			line_list = line.split('=>');
+			config.update({str(line_list[0].strip()):str(line_list[1].strip())})
+			# print config 
+	return config
+
+# res = lib.get_config('conf.ini','global')
+# file_path = res['path']
+
+# print file_path
+# exit()
+
+# php_config(file_path)
+
+
+print "接口检测\n"
+print "server\t获取数据\t错误"
+class_fun = ['trade','select']
+to_data = {'whereStr':'1=1','selectStr':'idd'}
+user = ['company','com889900']
+host = 'http://demo3'
+
+res = lib.surl(class_fun,to_data,host,user)
+
+if str(res).find('idd') != -1:
+	print "s2\tok\t--"
+else:
+	print "s2\tok\t"+res+""
+	pass
+
+host = 'http://demo2'
+res = lib.surl(class_fun,to_data,host,user)
+
+if str(res).find('idd') != -1:
+	print "s3\tok\t--"
+else:
+	print "s3\tok\t"+res+""
+	pass
+
+
+host = 'http://demo'
+res = lib.surl(class_fun,to_data,host,user)
+
+if str(res).find('idd') != -1:
+	print "s4\tok\t--"
+else:
+	print "s4\tok\t"+res+""
+	pass
+
+
+print 
+
+now_time = str(int(time.time()))+'_test'
+
+memcache_config = lib.get_config('conf.ini','memcache')
+config_open = memcache_config['open']
+del memcache_config['open']
+if config_open=='1' :
+	print "memcache检测\n"
+	print "server\t当前连接数\t读写\t错误"
+	memcache_config = lib.unique_value(memcache_config)
+	import memcache
+	do_memcache = []
+	for memcache_str in memcache_config:
+
+		memcache_host_port = memcache_str
+
+		msgs = memcache_str
+		
+		try:
+			
+			mc = memcache.Client([memcache_host_port], debug=True)
+			mc.set(now_time,'1')
+			res = mc.get(now_time)
+
+			mc_status = mc.get_stats()
+			# print "Current Connect Num: "+str(mc_status[0][1]['curr_connections'])
+			msgs += "\t"+str(mc_status[0][1]['curr_connections'])
+
+		except Exception, e:
+			# print "-------error-start--------"
+			# print memcache_str +' '+ str(e.message)
+			# print "-------error-end--------"
+			# print 
+			msgs += '\t'+str(e.message)
+			pass
+
+		else:
+			if res=='1' :
+				# print "success set and get and del "+memcache_str
+				mc.delete(now_time)
+				msgs += '\tok\t--'
+		print msgs
+		pass
+
+print 
+
+
+redis_config = lib.get_config('conf.ini','redis')
+open_config = redis_config['open']
+del redis_config['open']
+
+if open_config=='1':
+	print "redis检测\n"
+	print "server\t服务器信息\t读写\t错误"
+	redis_config = lib.unique_value(redis_config)
+	import redis
+
+	for redis_str in redis_config:
+
+		redis_host_port = redis_str
+
+		msgs = redis_str+'\t'
+		try:
+
+			redis_host_port_list = redis_host_port.split(':')
+			r = redis.Redis(host=redis_host_port_list[0],port=redis_host_port_list[1])
+			r_status = r.execute_command('info').split("\r\n")
+			for x in r_status:
+				if x.find('connected_clients')!=-1:
+					# print x
+					msgs +=  str(x) + "\t"
+				pass
+			r.set(now_time,'1')
+			res = r.get(now_time)
+		
+		except Exception, e:
+			# print "-------error-start--------"
+			# print redis_str + str(e.message)
+			# print "-------error-end--------"
+			msgs = '\t'+str(e.message)+'\t'
+			print 
+			
+
+		else:
+			if res=='1' :
+				# print "success set and get and del "+redis_str
+				r.delete(now_time)
+				msgs +=  "ok\t--"
+				pass
+
+		print msgs
+		pass
+
+
+mysql_config = lib.get_config('conf.ini','mysql')
+open_config = mysql_config['open']
+del mysql_config['open']
+
+if open_config == "1":
+
+	print "mysql检测\n"
+	print "server\t锁表信息\t当前连接数\t超过3秒的语句\t错误"
+	mysql_config = lib.unique_value(mysql_config)
+
+	import MySQLdb
+
+	for mysql_str in mysql_config:
+		
+		host_port,user,passwd,db  = mysql_str.split('/')
+		if len(host_port.split(':'))>1:
+			host = host_port.split(':')[0]
+			port = int(host_port.split(':')[1])
+		else:
+			host = host_port
+			port = 3306
+		if not passwd : continue
+		
+		msgs = mysql_str+'\t'
+
+		try:
+			mysql_status = '1';
+			conn= MySQLdb.connect(
+				host=host,
+				port =port,
+				user=user,
+				passwd=passwd,
+				db = db,
+			)
+			cur = conn.cursor()
+
+			#锁表
+			# print "check lock table"
+			res = cur.fetchmany(cur.execute("SHOW OPEN TABLES where In_use > 0"))
+			if res:
+				lib.dump(res)
+				res2 = cur.fetchmany(cur.execute("SHOW STATUS like 'Table%'"))
+				lib.dump(res2)
+				msgs += str(res)+str(res2)+'\t'
+				mysql_status = '0'
+			else:
+				msgs += '\t'
+
+			pass
+
+			# print "check status"
+			res = cur.fetchmany(cur.execute("SHOW FULL PROCESSLIST"))
+
+			# print "Current Connect Num: "+str(len(res))
+			msgs += str(len(res))+'\t'
+
+			for x in res:
+				_host = x[2]
+				_db = x[3]
+				_type = x[4]
+				_time = x[5]
+				_sql = x[6]
+
+				if _type.upper()=='QUERY' and _time>3 :
+					# print "host: "+_host+" time > 3s query :"+str(_sql)
+					msgs += "host: "+_host+" time > 3s query :"+str(_sql)+'\t'
+					mysql_status = '0';
+				if _type.upper()=='LOCKED':
+					# print "host: "+_host+" LOCKED ";
+					msgs += "host: "+_host+" LOCKED "+'\t'
+					mysql_status = '0';
+
+				pass
+
+
+			if mysql_status == '0':continue
+
+			#表
+			# print 'check create table'
+			# check_fault_job1001 = 'check_fault_job1001'+now_time
+			# cur.execute("CREATE TABLE "+check_fault_job1001+" (id int)")
+			# conn.commit()
+			# print 'check create table - ok'
+
+			# print 'check insert'
+			# cur.execute("INSERT INTO  "+check_fault_job1001+"  (`id`) VALUES ('1')")
+			# conn.commit()
+			# print 'check insert - ok'
+
+			# print 'check select'
+			# cur.execute("SELECT * FROM  "+check_fault_job1001+"  LIMIT 1")
+			# info = cur.fetchone()
+			# if info :
+			# 	if info[0] == 1:
+			# 		print 'check select - ok'
+			# 		cur.execute("DROP TABLE IF EXISTS "+check_fault_job1001+"" )
+			# 		conn.commit()
+			pass
+
+		except Exception, e:
+			# print "-------error-start--------"
+			# print host,
+			# print port,
+			# print user,
+			# print passwd,
+			# print db,
+			# print mysql_str + str(e)
+			# print "-------error-end--------"
+			msgs += str(e)+'\t'
+			print 
+
+
+		else:
+			if mysql_status=='1' :
+				# print "success create and insert and select and del  "+mysql_str
+				msgs += '\t--\t'
+				pass
+
+		print msgs
+		pass
+
+print 
+
+es_config = lib.get_config('conf.ini','es')
+config_open = es_config['open']
+del es_config['open']
+
+if config_open == "1":
+	print "ES检测\n"
+	print "server\t服务信息\t内存信息\t健康状态\t错误"
+	es_config = lib.unique_value(es_config)
+	
+	for es_str in es_config:
+
+		msgs = es_str+'\t'
+		try:
+			url = 'http://'+es_str+'/_nodes/stats/'
+			res = lib.http_get(url)
+			res=json.loads(res,encoding='UTF-8')
+	
+
+			_msgs = "\""
+			for x in res['nodes']:
+				_msgs +="----"+str(x)+"----"+"\n"
+				_msgs +=" doc current get num : "+str(res['nodes'][x]['indices']['get']["current"])+"\n"
+				_msgs +=" doc total get num : "+str(res['nodes'][x]['indices']['get']["total"])+"\n"
+				_msgs +=" http current open num : "+str(res['nodes'][x]['http']['current_open'])+"\n"
+				_msgs +=" http total opened num : "+str(res['nodes'][x]['http']['total_opened'])+"\n"
+				_msgs +=" transport server open num : "+str(res['nodes'][x]['transport']['server_open'])+"\n"
+				_msgs +=" thread_pool search threads : "+str(res['nodes'][x]['thread_pool']['search']['threads'])+"\n"
+				_msgs +=" thread_pool search queue : "+str(res['nodes'][x]['thread_pool']['search']['queue'])+"\n"
+				_msgs +=" thread_pool search active : "+str(res['nodes'][x]['thread_pool']['search']['active'])+"\n"
+				pass
+			_msgs += "\""
+			msgs += _msgs+'\t'
+
+			url = 'http://'+es_str+'/_cat/nodes?v&h=ip,port,heapPercent,heapMax,ramPercent,ramMax'
+			res2 = lib.http_get(url)
+			# print res2
+			# res2 = res2.replace('\n','')
+			# res2 = res2.replace('\r','')
+			msgs +=  "\""+str(res2)+"\""+'\t'
+
+
+			url = 'http://'+es_str+'/_cluster/health?level=indices'
+			res3 = lib.http_get(url)
+			res3=json.loads(res3,encoding='UTF-8')
+
+			__msgs = "\""
+			for x in res3['indices']:
+				# print x +" : "+ str(res3['indices'][x]['status'])
+				__msgs += x +" : "+ str(res3['indices'][x]['status'])+'\n'
+				if str(res3['indices'][x]['status']) != 'green':
+					# print "--------------------"
+					# lib.dump(res3['indices'][x])
+					# print "--------------------"
+					__msgs += str(res3['indices'][x]) + '\n'
+					print  
+				pass
+			__msgs += "\""
+			# print 
+			msgs += __msgs
+		except Exception, e:
+			# print '----error--start----'
+			# print es_str+" "+str(e)
+			# print '----error--end----'
+			msgs += str(e)+'\n'
+			print str(e)
+		pass
+		print msgs
+
+
+
+
+lib.py
+
+#!/usr/bin/python
+#-*-coding:utf-8-*-
+# 监控服务
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import ConfigParser
+
+import os,time,datetime
+from urlparse import urlparse
+import urllib,urllib2
+import json
+import httplib
+
+#获取配置
+def get_config(fileName=None,group=None):
+    if fileName==None : return None
+    if group==None : return None
+    cf = ConfigParser.ConfigParser()
+    cf.read(fileName)
+    conf_list = cf.items(group)
+    conf_option = cf.options(group)
+    out = {}
+    for x in conf_list:
+        out[x[0]] = x[1]
+    return out
+
+#去重
+def unique_value(config_dict):
+    out = []
+    if config_dict:
+        for x in config_dict:
+            if config_dict[x] not in out:
+                out.append(config_dict[x])
+            pass
+    return out
+
+#输出
+def dump(var):
+    if var:
+        if isinstance(var,list) or isinstance(var,tuple) :
+            for x in var:
+                print x
+                pass
+            pass
+        if isinstance(var,dict):
+            for x in var:
+                print str(x) 
+                print var[x]
+                pass
+            pass
+
+def parsepath (pageurl):
+    res={}
+    # print pageurl
+    if pageurl[0:7]=='http://':
+        urlp = urlparse(pageurl)
+        fpos=pageurl.find('/',8)
+        res['scheme']=urlp.scheme
+        res['netloc']=urlp.netloc
+    else:
+        fpos=pageurl.find('/')
+    pos=-1
+    if pageurl[-1:]!='/':  pos=pageurl.rfind('/')
+    if pos==-1 : pos=len(pageurl)
+
+    if pos!=len(pageurl): res['filename']=pageurl[pos+1:len(pageurl)]
+    if fpos!=-1 : res['dir']=pageurl[fpos:pos+1]
+
+    if res.get('filename')!=None:
+        filename=res.get('filename')
+        kpos=filename.rfind('.')
+        if kpos!=-1:
+            res['ext']=filename[kpos+1:len(filename)]
+
+    #print res
+    return res
+
+def http_post(data,target):
+    poststr=""
+    murl=parsepath(target)
+    headers = {"Content-type": "application/x-www-form-urlencoded" , "Accept": "text/plain"}
+    if data!=None:
+        data['python_post'] = 1
+        poststr=urllib.urlencode(data)
+    # print poststr
+    post_flag='1'
+    conn=None
+    try:
+        conn = httplib.HTTPConnection(murl['netloc'],'80',timeout=30)
+        conn.request("POST",target,poststr,headers)
+        response = conn.getresponse()
+        res= response.read()
+        # if res.find("OK")!=-1:
+        #     post_flag='1'
+        # else:
+        post_flag=res
+    except Exception, e:
+        print e
+    finally:
+        if conn:
+            conn.close()
+
+    return post_flag
+
+
+def surl(func,data,host='',user=['user','pass']):
+
+    target=host+"op="+func[0]+'&func='+func[1]+"&user="+user[0]+"&pwd="+user[1]+"&gtype=http&rtype=json";
+    # print target
+    res=http_post(data,target)
+    # print data
+    # print res
+    # arr={}
+    # try:
+    #     if res!=None and res.strip()!='':
+    #         arr=json.loads(res,encoding='UTF-8')
+    #     else:
+    #         arr=None
+    # except Exception, e:
+    #     print e
+    return res
+
+def http_get(url,data=None):
+    req = urllib2.Request(url)
+    req.add_header('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36')
+    response = urllib2.urlopen(req,timeout=5)
+    html=response.read()
+    return html
+    
+    
+    
+#coding: utf-8
+import multiprocessing
+import os, time, random
+
+def Lee():
+    print "\nRun task Lee-%s" %(os.getpid()) #os.getpid()获取当前的进程的ID
+    start = time.time()
+    time.sleep(random.random() * 10) #random.random()随机生成0-1之间的小数
+    end = time.time()
+    print 'Task Lee, runs %0.2f seconds.' %(end - start)
+
+def Marlon():
+    print "\nRun task Marlon-%s" %(os.getpid())
+    start = time.time()
+    time.sleep(random.random() * 40)
+    end=time.time()
+    print 'Task Marlon runs %0.2f seconds.' %(end - start)
+
+def Allen():
+    print "\nRun task Allen-%s" %(os.getpid())
+    start = time.time()
+    time.sleep(random.random() * 30)
+    end = time.time()
+    print 'Task Allen runs %0.2f seconds.' %(end - start)
+
+def Frank():
+    print "\nRun task Frank-%s" %(os.getpid())
+    start = time.time()
+    time.sleep(random.random() * 20)
+    end = time.time()
+    print 'Task Frank runs %0.2f seconds.' %(end - start)
+        
+if __name__=='__main__':
+    function_list=  [Lee, Marlon, Allen, Frank] 
+    print "parent process %s" %(os.getpid())
+
+    pool=multiprocessing.Pool(4)
+    for func in function_list:
+        pool.apply_async(func)     #Pool执行函数，apply执行函数,当有一个进程执行完毕后，会添加一个新的进程到pool中
+
+    print 'Waiting for all subprocesses done...'
+    pool.close()
+    pool.join()    #调用join之前，一定要先调用close() 函数，否则会出错, close()执行后不会有新的进程加入到pool,join函数等待素有子进程结束
+    print 'All subprocesses done.'
+    
+ es 配置
+http://docs-ci.oneapm.com/services_example/elasticsearch.html
+http://zhaoyanblog.com/archives/732.html
+
+
+
+es
+
+集群健康
+
+GET /_cluster/health
+
+curl http://127.0.0.1:9200/_cat/indices?v
+curl http://127.0.0.1:9200/_cluster/health
+
+curl http://127.0.0.1:9200/_cluster/health?level=indices
+green	所有主要分片和复制分片都可用
+yellow	所有主要分片可用，但不是所有复制分片都可用
+red	不是所有的主要分片都可用
+
+{  
+  "cluster_name" : "if2c",  
+  "status" : "yellow",   //集群的状态红绿灯，绿：健康，黄：亚健康，红：病态  
+  "timed_out" : false,  
+  "number_of_nodes" : 1, //节点数  
+  "number_of_data_nodes" : 1, //数据节点数  
+  "active_primary_shards" : 3, //分片数，3个Index库  
+  "active_shards" : 3,  
+  "relocating_shards" : 0,  
+  "initializing_shards" : 0,  
+  "unassigned_shards" : 3  //未指定节点，配置了复本，仅使用一台机器部署会出现这种情况  
+}  
+
+
+_index 	文档存储的地方
+_type 	文档代表的对象的类
+_id 	文档的唯一标识
+
+PUT /{index}/{type}/{id}
+
+
+curl http://127.0.0.1:9200/_cat
+/_cat/allocation
+/_cat/shards
+/_cat/shards/{index}
+/_cat/master
+/_cat/nodes
+/_cat/indices
+/_cat/indices/{index}
+/_cat/segments
+/_cat/segments/{index}
+/_cat/count
+/_cat/count/{index}
+/_cat/recovery
+/_cat/recovery/{index}
+/_cat/health
+/_cat/pending_tasks
+/_cat/aliases
+/_cat/aliases/{alias}
+/_cat/thread_pool
+/_cat/plugins
+/_cat/fielddata
+/_cat/fielddata/{fields}
+
+Elasticsearch 一样也支持用 ?pretty 参数美化 JSON 输出。此外，还支持 ?format=yaml 来输出 YAML 格式的指标统计。
+
+127.0.0.1:9200/push_logs
+curl http://127.0.0.1:9200/push_logs
+
+
+curl -s http://127.0.0.1:9200/_node/stats/events?pretty=true
+
+
+curl http://127.0.0.1:9200/_cluster/health?level=indices
+
+curl http://127.0.0.1:9200/_nodes/stats?pretty
+
+
+curl http://127.0.0.1:9200/_cluster/pending_tasks?pretty
+
+
+curl http://127.0.0.1:9200/_cluster/health?level=indices
+
+
+
+
+集群状态
+
+curl http://127.0.0.1:9200/_cat/health?pretty
+
+节点状态
+
+curl http://127.0.0.1:9200/_cat/nodes?v&h=ip,port,heapPercent,heapMax,ramPercent,ramMax
+
+curl -XGET 'http://127.0.0.1:9200/_cat/nodes?v&h=ip,port,heapPercent,heapMax,ramPercent,ramMax'
+
+
+线程池状态
+
+curl -XGET 'http://127.0.0.1:9200/_cat/thread_pool?v&h=node_name'
+
+
+
+curl -XGET 'http://127.0.0.1:9200/_node/stats/hot_threads?human=true'
+
+
+
+
+'''
+python-pyelasticsearch 扩展
+wget https://pypi.python.org/packages/2f/3a/7643cfcfc4cbdbb20ada800bbd54ac9705d0c047d7b8f8d5eeeb3047b4eb/pyelasticsearch-1.4.tar.gz
+tar -xvzf pyelasticsearch-1.4.tar.gz 
+cd pyelasticsearch-1.4
+python setup.py install
+'''
+
+es = ElasticSearch('http://'+es_str+'/')
+curl http://127.0.0.1:9200/_cat/health?pretty
+cluster indices shards
+res = es.health()
+print res
+res = es.status()
+
+
+
+python-pymongo 扩展
+wget https://pypi.python.org/packages/82/26/f45f95841de5164c48e2e03aff7f0702e22cef2336238d212d8f93e91ea8/pymongo-3.4.0.tar.gz#md5=aa77f88e51e281c9f328cea701bb6f3e
+tar -zxvf pymongo-3.4.0.tar.gz
+cd pymongo-3.4.0
+python setup.py install
+
+
+http://api.mongodb.com/python/2.7.1/examples/index.html
+
+print "====mongodb==开始=="
+
+mongodb_config = lib.get_config('conf.ini','mongodb')
+mongodb_config = lib.unique_value(mongodb_config)
+
+import pymongo
+
+
+for mongodb_str in mongodb_config:
+  
+  host_port,user,passwd,db_name  = mongodb_str.split('/')
+  if len(host_port.split(':'))>1:
+    host = host_port.split(':')[0]
+    port = int(host_port.split(':')[1])
+  else:
+    host = host_port
+    port = 27017
+
+  print mongodb_str
+
+  try:
+
+
+    client = pymongo.MongoClient(host,port)
+    # print dir(client)
+    # client.database.authenticate(user,passwd)
+    print client
+    print client.address
+    # connection max num 
+    print client.max_pool_size
+
+    # locked
+    print client.is_locked
+    # print client.database_names()
+    print client.server_info()
+
+    print client.server_description.all_hosts;
+
+    command = 'db.serverStatus()'
+    print pymongo.topology_description.TopologyDescription.server_descriptions()
+
+
+    # client.database.authenticate(user,passwd)
+    # db = client[db_name].max_pool_size
+
+    # collection = db.stat()
+    # print collection
+    exit()
+    pass
+  except Exception, e:
+    raise
+  else:
+    pass
+  finally:
+    pass
+  pass
+
+print "====mongodb==结束=="
+
+
+http://www.jb51.net/article/53878.htm
+
