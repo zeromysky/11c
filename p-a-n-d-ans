@@ -1,0 +1,187 @@
+graphdata.txt
+
+(null)	a
+a	b
+a	h
+b	c
+b	h
+h	i
+h	g
+g	i
+g	f
+c	f
+c	i
+c	d
+d	f
+d	e
+f	e
+b	g
+15476338	a
+a	15476338
+c	a
+f	c
+
+to_do.py
+
+#!/usr/bin/python  
+# -*- coding: utf-8 -*-  
+
+
+from pandas import Series,DataFrame
+import pandas as pd
+import numpy as np
+import time,sys
+
+print '开始-第一步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+param = sys.argv
+number = int(param[1])
+print '个数：'+str(number)
+
+
+# left = pd.read_table('./graphdata.txt',low_memory=False,header=None,encoding='utf-8',iterator=True)
+left = pd.read_table('/var/python/fr.txt',low_memory=False,header=None,encoding='utf-8',iterator=True)
+# left = pd.read_table('./fr.txt',low_memory=False,header=None,encoding='utf-8',iterator=True)
+
+left = left.get_chunk(number)
+
+left.columns = ['x', 'y']
+
+right = left.copy()
+right.columns = ['a', 'b']
+
+
+left = left.drop(left[left[left[['x']]=='(null)']['x'].isin(['(null)'])].index)
+left = left.drop(left[left[left[['x']]=='15476338']['x'].isin(['15476338'])].index)
+left = left.drop(left[left[left[['y']]=='15476338']['y'].isin(['15476338'])].index)
+
+right = right.drop(right[right[right[['a']]=='(null)']['a'].isin(['(null)'])].index)
+right = right.drop(right[right[right[['a']]=='15476338']['a'].isin(['15476338'])].index)
+right = right.drop(right[right[right[['b']]=='15476338']['b'].isin(['15476338'])].index)
+
+
+# print left
+# print right
+data = pd.merge(left,right,left_on='y',right_on='a',how='inner')  #传出数组  
+
+del left,right
+
+data_x_b = data.loc[:,['x','b']]
+data_x_b = data_x_b.dropna()
+ss = data_x_b.copy()
+data_x_b = data_x_b.drop(data_x_b[ss['x']==ss['b']].index)
+
+# right.drop(right[right[right[['b']]=='15476338']['b'].isin(['15476338'])].index)
+# print data_x_b
+
+print len(data_x_b.values)
+print '运算结束'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+# f=file("./out4.txt","w");
+f=file("/var/python/do_"+str(number)+".txt","w");
+
+u_x_b = data_x_b.values
+
+# out = []
+for x_b in u_x_b:
+	
+	x = str(x_b[0])
+	b = str(x_b[1])
+	# out.append(x+"\t"+b+"\n")
+	f.write(x+"-"+b+"\t"+"1"+"\n")
+	pass
+f.close()
+
+print '结束-第一步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+to_sum.py
+
+#!/usr/bin/python  
+# -*- coding: utf-8 -*-  
+
+
+from pandas import Series,DataFrame
+import pandas as pd
+import time,sys
+
+
+print '开始-第二步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+
+param = sys.argv
+number = int(param[1])
+print '个数：'+str(number)
+
+data = pd.read_table("/var/python/do_"+str(number)+".txt",low_memory=False,header=None,encoding='utf-8')
+# data = pd.read_table('./out4.txt',low_memory=False,header=None,encoding='utf-8')
+
+data.columns = ['x', 'y']
+
+
+group1 = data.groupby(['x']).sum()
+print '运算结束'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+
+group_end = group1['y']
+
+group_end.to_csv("/var/python/do_2_"+str(number)+".txt",sep='-',encoding='utf-8',index=True);
+# group_end.to_csv('./out7.txt',sep='-',encoding='utf-8',index=True);
+
+
+print '结束-第二步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+to_see.py
+
+#!/usr/bin/python  
+# -*- coding: utf-8 -*-  
+
+
+from pandas import Series,DataFrame
+import pandas as pd
+import time,sys
+
+
+print '开始-第三步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+param = sys.argv
+number = int(param[1])
+print '个数：'+str(number)
+
+
+data = pd.read_table("/var/python/do_2_"+str(number)+".txt",low_memory=False,header=None,encoding='utf-8',sep='-')
+# data = pd.read_table('./out7.txt',low_memory=False,header=None,encoding='utf-8',sep='-')
+
+# data.columns = ['x', 'y']
+
+
+# f=file("./out8.txt","w");
+f=file("/var/python/do_3_"+str(number)+".txt","w");
+
+u_x_b = data.values
+
+print '运算结束'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
+
+# out = []
+for x_b in u_x_b:
+	s = x_b[0].split('-')
+	x = str(s[0])
+	b = str(s[1])
+	num = x_b[1]
+
+	f.write(str(num)+"\t"+x+"\t"+b+"\t"+"\n")
+	pass
+f.close()
+
+
+
+print '结束-第三步'
+print time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+
