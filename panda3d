@@ -1,0 +1,21 @@
+panda3d 安装
+
+http://www.panda3d.org/download.php?platform=windows&version=1.8.1&sdk   是 python2.7的
+
+修改 path  删除panda3d 的python
+
+
+
+
+from sys import path
+path.append('D:\Panda3D-1.8.1')
+path.append('D:\Panda3D-1.8.1\\bin')
+from direct.showbase.ShowBase import ShowBase
+
+class MyApp(ShowBase):
+   
+    def __init__(self):
+        ShowBase.__init__(self)
+
+app=MyApp()
+app.run()
