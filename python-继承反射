@@ -1,0 +1,128 @@
+# -*- coding: utf-8 -*-
+
+
+
+#单继承时super()和__init__()实现的功能是类似的
+'''
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'creat A ',
+        Base.__init__(self)
+class childB(Base):
+    def __init__(self):
+        print 'creat B ',
+        super(childB, self).__init__()
+base = Base()
+a = childA()
+b = childB()
+'''
+#super()可以避免重复调用
+'''
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'enter A '
+        Base.__init__(self)
+        print 'leave A'
+class childB(childA, Base):
+    def __init__(self):
+        childA.__init__(self)
+        Base.__init__(self)
+
+b = childB()
+
+
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'enter A '
+        super(childA, self).__init__()
+        print 'leave A'
+class childB(childA, Base):
+    def __init__(self):
+        super(childB, self).__init__()
+b = childB()
+print b.__class__.mro()
+
+'''
+
+#super 执行顺序
+'''
+class A(object):
+    def __init__(self):
+        print 'A __init__'
+        super(A, self).__init__()
+        print 'leave A'
+
+class C(object):
+    def __init__(self):
+        print 'C __init__'
+        super(C, self).__init__()
+        print 'leave C'
+
+class B(A,C):
+    def __init__(self):
+        print 'B __init__'
+        super(B, self).__init__()
+        print 'leave B'
+
+class D(B):
+    def __init__(self):
+        print 'D __init__'
+        super(D, self).__init__()
+        print 'leave D'
+
+if __name__ == '__main__':
+    D()
+'''
+
+class A(object):
+    name = None
+    def __init__(self,name):
+        print 'A __init__'
+        super(A, self).__init__()
+        print 'leave A'
+        self.name = name
+
+class D(A):
+    def __init__(self,name):
+        print 'D __init__'
+        super(D, self).__init__(name)
+        print 'leave D'
+        print self.name
+
+if __name__ == '__main__':
+    D('xiaobai')
+
+
+分别创建了foo.py和bar.py
+
+foo.py
+
+def main():
+    print(__name__)
+
+bar.py
+
+import importlib
+
+def dynamic_import(module):
+    return importlib.import_module(module)
+
+
+if __name__ == "__main__":
+    module = dynamic_import('foo')
+    module.main()
+
+    module2 = dynamic_import('bar')
+    module2.main()
+
+foo
+bar
