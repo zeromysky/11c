@@ -1,0 +1,210 @@
+
+
+
+
+
+#静态文本
+staticText = wx.StaticText(parent, id, '显示在静态控件中的文本', pos=wx.DefaultPosition,size=wx.DefaultSize, 
+	style=0, name="对象的名字")
+
+style 
+
+wx.ALIGN_CENTER：静态文本位于静态文本控件的中心。
+
+wx.ALIGN_LEFT：文本在窗口部件中左对齐。这是默认的样式。
+
+wx.ALIGN_RIGHT：文本在窗口部件中右对齐。
+
+wx.ST_NO_AUTORESIZE：如果使用了这个样式，那么在使用了SetLabel()改变文本之后，静态文本控件不将自我调整尺寸。
+					你应结合使用一个居中或右对齐的控件来保持对齐。
+
+#指定了前景色
+staticText.SetForegroundColour('white')
+#背景色
+staticText.SetBackgroundColour('white')
+#修改内容 # 显示多行文本
+staticText.SetLabel('显示在静态控\n件中的文本')
+#字体
+font = wx.Font(18, wx.DECORATIVE, wx.ITALIC, wx.NORMAL)
+staticText.SetFont(font)
+
+
+
+#输入框
+textCtrl = wx.TextCtrl(parent, id, value = "初始文本", pos=wx.DefaultPosition, size=wx.DefaultSize, 
+	style=0, validator=wx.DefaultValidator name=wx.TextCtrlNameStr)
+
+style
+	
+wx.TE_CENTER：控件中的文本居中。
+
+wx.TE_LEFT：控件中的文本左对齐。默认行为。
+
+wx.TE_NOHIDESEL：文本始终高亮显示，只适用于Windows。
+
+wx.TE_PASSWORD：不显示所键入的文本，代替以星号显示。
+
+wx.TE_PROCESS_ENTER：如果使用了这个样式，那么当用户在控件内按下回车键时，一个文本输入事件被触发。否则，按键事件内在的由该文本控件或该对话框管理。
+
+wx.TE_PROCESS_TAB：如果指定了这个样式，那么通常的字符事件在Tab键按下时创建（一般意味一个制表符将被插入文本）。否则，tab由对话框来管理，通常是控件间的切换。
+
+wx.TE_READONLY：文本控件为只读，用户不能修改其中的文本。
+
+wx.TE_RIGHT：控件中的文本右对齐。 
+
+#在尾部添加文本
+textCtrl.AppendText(text)
+
+#重置控件中的文本为“”。并且生成一个文本更新事件。
+textCtrl.Clear()
+
+#产生一个按键事件，插入与事件相关联的控制符，就如同实际的按键发生了。
+EmulateKeyPress(event)
+
+#得到或设置插入点的位置，位置是整型的索引值。控件的开始位置是0。
+textCtrl.GetInsertionPoint() 
+textCtrl.SetInsertionPoint(0) 
+textCtrl.SetInsertionPointEnd()
+
+#返回控件中位置索引范围内的字符串
+GetRange(from, to)
+
+#以元组的形式返回当前所选择的文本的起始位置的索引值（开始，结束）。
+GetSelection() 
+#得到所选择的字符串
+GetStringSelection() 
+#设置选择的文本。
+SetSelection(from, to)
+
+#返回控件中所有的字符串
+GetValue() 
+#改变控件中的全部文本
+SetValue(value)
+
+#删除指定范围的文本。
+Remove(from, to)
+#用给定的值替换掉指定范围内的文本。这可以改变文本的长度。
+Replace(from, to, value)：
+#类似于AppendText()，只是写入的文本被放置在当前的插入点。 
+WriteText(text)
+
+#多行文本
+
+style=wx.TE_MULTILINE #创建一个文本控件
+
+wx.HSCROLL：如果文本控件是多行的，并且如果该样式被声明了，那么长的行将不会自动换行，并显示水平滚动条。
+			该选项在GTK+中被忽略。
+
+wx.TE_AUTO_URL：如果丰富文本选项被设置并且平台支持的话，那么当用户的鼠标位于文本中的一个URL上或在该URL	
+				上敲击时，这个样式将导致一个事件被生成。
+
+wx.TE_DONTWRAP：wx.HSCROLL的别名。
+
+wx.TE_LINEWRAP：对于太长的行，以字符为界换行。某些操作系统可能会忽略该样式。
+
+wx.TE_MULTILINE：文本控件将显示多行。
+
+wx.TE_RICH：用于Windows下，丰富文本控件用作基本的窗口部件。这允许样式文本的使用。
+
+wx.TE_RICH2：用于Windows下，把最新版本的丰富文本控件用作基本的窗口部件。
+
+wx.TE_WORDWRAP：对于太长的行，以单词为界换行。许多操作系统会忽略该样式。
+
+多行丰富文本控件使用wx.TE_MULTILINE | wx.TE_RICH2 
+
+
+richText.SetStyle(44, 52, wx.TextAttr("white", "black")) #设置文本样式
+points = richText.GetFont().GetPointSize() 
+f = wx.Font(points + 3, wx.ROMAN, wx.ITALIC, wx.BOLD, True) #创建一个字体
+richText.SetStyle(68, 82, wx.TextAttr("blue", wx.NullColour, f)) #用新字体设置样式
+
+
+wx.TextAttr(colText, colBack=wx.NullColor, font=wx.NullFont)
+
+
+文本色和背景色是wxPython对象，它们可以使用颜色名或颜色的RGB值(红, 绿, 蓝)来指定。
+wx.NullColor指明使用控件目前的背景色。
+font是一个wx.Font对象，
+wx.NullFont对象指明使用当前默认字体。
+
+类wx.TextAttr有相关属性的get*()方法：GetBackgroundColour(), GetFont(), 和 GetTextColour()，
+也有返回布尔值的验证存在性的方法：HasBackgroundColour(), HasFont(), 和 HasTextColour()。
+如果属性包含一个默认值，则Has*()方法返回False。如果所有这三个属性都包含默认值，则IsDefault()方法返回true。
+这个类没有set*()方法，因为wx.TextAttr的实例是不可变的。要改变文本的样式，你必须创建一个实例。
+
+
+richText.SetStyle(44, 52, wx.TextAttr("white", "black"))
+
+背景色变为了黑色，相应的字符变为了白色。 
+
+使用文本样式，要调用SetDefaultStyle(style)或SetStyle(start, end,style)。
+第一个方法设置为控件当前的样式。任何插入到该控件中的文本，不管是键入的，
+或使用了AppendText() 或 WriteText()方法的，都以该样式显示。
+如果样式的某个属性是默认的，那么该样式的当前值被保留。
+但是，如果样式的所有属性都是默认的，那么恢复默认样式。
+SetStyle()与SetDefaultStyle(style)类似，只是立即对位于start 和 end位置之间的文本起作用。
+样式参数中的默认属性通过检查该控件的当前默认样式来解决。
+
+
+#返回给定行的长度的整数值
+GetLineLength(lineNo)
+
+#返回给定行的文本。
+GetLineText(lineNo)
+#返回控件中的行的数量。对于单行，返回1
+GetNumberOfLines()：
+#布尔类型的方法，确定控件的状态。
+IsMultiLine() IsSingleLine()
+
+#指定文本内的一个整数值位置，返回以元组(列，行)形式的索引位置。列和行的索引值均以0作为开始。
+PositionToXY(pos)
+
+#立即改变指定范围内文本的样式。
+SetStyle(start, end,style)：
+#引起一个多行控件的滚动，以便观察到指定位置的内容。
+ShowPosition(pos)
+
+#与PositionToXY(pos)相反——指定行和列，返回整数值位置。 
+XYToPosition(x, y)
+
+selection = text.GetRange(x, x + 10) 
+
+wx.Font(pointSize, family, style, weight, underline=False, faceName="", encoding=wx.FONTENCODING_DEFAULT)
+
+style
+
+wx.DECORATIVE：一个正式的，老的英文样式字体。
+
+wx.DEFAULT：系统默认字体。
+
+wx.MODERN：一个单间隔（固定字符间距）字体。
+
+wx.ROMAN：serif字体，通常类似于Times New Roman。
+
+wx.SCRIPT：手写体或草写体
+
+wx.SWISS：sans-serif字体，通常类似于Helvetica或Arial。 
+
+
+
+print "getValue", len(multiText.GetValue()) print "lastPos", multiText.GetLastPosition()
+
+
+文本事件
+
+
+frame.Bind(wx.EVT_TEXT, frame.OnText, text)
+
+
+wx.TextCtrl的事件
+
+EVT_TEXT：当控件中的文本改变时产生该事件。文本因用户的输入或在程序中使用SetValue()而被改变，都要产生该事件。
+
+EVT_TEXT_ENTER：当用户在一个wx.TE_PROCESS_ENTER样式的文本控件中按下了回车键时，产生该事件。
+
+EVT_TEXT_URL：如果在Windows系统上，wx.TE_RICH或wx.TE_RICH2样式被设置了，并且wx.TE_AUTO_URL样式也被设置了，那么当在文本控件内的URL上发生了一个鼠标事件时，该事件被触发。
+
+EVT_TEXT_MAXLEN：如果使用SetMaxLength()指定了该控件的最大长度，那么当用户试图输入更长的字符串时，该事件被触发。你可能会用这个，例如，这时给用户显示一个警告消息。
+
+接下来，让我们来讨论被主要设计来得到鼠标输入的控件。其中最简单的就是按钮。 
+
