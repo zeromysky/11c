@@ -23,7 +23,9 @@ if __name__ == '__main__':
     param = [
       ['-i','--step',int,'this is step'],
       ['-t','--test',int,'this is test'],
-      ['-u','--url',str,'this is url']
+      ['-u','--url',str,'this is url'],
+      ['-c','--charset_out',str,'this is charset_out'],
+      ['-f','--charset_in',str,'this is charset_in']
     ]
     cmd_param = get_cmd_param(param)
 
@@ -32,6 +34,10 @@ if __name__ == '__main__':
     step = cmd_param['step']
     test = cmd_param['test']
     _url  = cmd_param['url']
+    charset_out  = cmd_param['charset_out']
+    charset_in  = cmd_param['charset_in']
+    if not charset_out:charset_out = 'utf-8'
+    if not charset_in:charset_in = 'utf-8'
 
     config = get_config('./conf.ini')
     print config
@@ -57,7 +63,7 @@ if __name__ == '__main__':
         if test == 1:
             print _url
             html_content = http_get(_url)
-            html_content = html_content.decode('utf-8','ignore')
+            html_content = html_content.decode(charset_in,'ignore')
             html_content = lxml.html.fromstring(html_content)
             tag_a_content = html_content.cssselect(config['url']['a'])
             target_urls = []
@@ -68,7 +74,11 @@ if __name__ == '__main__':
                     detail_url = tag_a_href
                 else:
                     detail_url = config['global']['domain'] + tag_a_href
-                if detail_url.find(config['url']['in'])>-1:
+                if 'in' in config['url'].keys():
+                    if detail_url.find(config['url']['in'])>-1:
+                        target_urls.append(detail_url)
+                    pass
+                else:
                     target_urls.append(detail_url)
                 pass
             target_urls = set(target_urls)
@@ -81,15 +91,18 @@ if __name__ == '__main__':
         if test==1:
             print _url
             html_content = http_get(_url)
-            html_content = html_content.decode('utf-8','ignore')
+            html_content = html_content.decode(charset_in,'ignore')
             html_content = lxml.html.fromstring(html_content)
             for field in config['field']:
-                print field
+                if field.find('_index') > -1:continue
                 tag_content_list = html_content.cssselect(config['field'][field])
                 if len(tag_content_list)>0:
-                    tag_content = tag_content_list[0]
+                    if field+'_index' in config['field'].keys():
+                        tag_content = tag_content_list[int(config['field'][field+'_index'])]
+                    else:
+                        tag_content = tag_content_list[0]
                     tag_html_contnet = lxml.html.tostring(tag_content)
-                    print HTMLParser.HTMLParser().unescape(tag_html_contnet).encode('utf-8','ignore')
+                    print HTMLParser.HTMLParser().unescape(tag_html_contnet).encode(charset_out,'ignore')
                     # print tag_content.text_content().encode('utf-8','ignore')
                 pass
             pass
@@ -99,7 +112,7 @@ if __name__ == '__main__':
         for _url in article_urls:
             print 'urls: '+_url
             html_content = http_get(_url)
-            html_content = html_content.decode('utf-8','ignore')
+            html_content = html_content.decode(charset_in,'ignore')
             html_content = lxml.html.fromstring(html_content)
             tag_a_content = html_content.cssselect(config['url']['a'])
             target_urls = []
@@ -110,7 +123,11 @@ if __name__ == '__main__':
                     detail_url = tag_a_href
                 else:
                     detail_url = config['global']['domain'] + tag_a_href
-                if detail_url.find(config['url']['in'])>-1:
+                if 'in' in config['url'].keys():
+                    if detail_url.find(config['url']['in'])>-1:
+                        target_urls.append(detail_url)
+                    pass
+                else:
                     target_urls.append(detail_url)
                 pass
             time.sleep(1)
@@ -118,16 +135,20 @@ if __name__ == '__main__':
             for x_detail_url in target_urls:
                 print 'url: '+x_detail_url
                 acticle_html_content = http_get(x_detail_url)
-                acticle_html_content = acticle_html_content.decode('utf-8','ignore')
+                acticle_html_content = acticle_html_content.decode(charset_in,'ignore')
                 acticle_html_content = lxml.html.fromstring(acticle_html_content)
                 sql_data = {'url':x_detail_url} 
                 for field in config['field']:
+                    if field.find('_index') > -1:continue
                     tag_content_list = acticle_html_content.cssselect(config['field'][field])
                     if len(tag_content_list)>0:
-                        tag_content = tag_content_list[0]
+                        if field+'_index' in config['field'].keys():
+                            tag_content = tag_content_list[int(config['field'][field+'_index'])]
+                        else:
+                            tag_content = tag_content_list[0]
                         tag_html_contnet = lxml.html.tostring(tag_content)
                         field_value = HTMLParser.HTMLParser().unescape(tag_html_contnet)
-                        # .encode('utf-8','ignore')
+                        print field_value.encode(charset_out,'ignore')
                         # print tag_content.text_content().encode('utf-8','ignore')
                         sql_data[field] = field_value
                     pass
@@ -137,20 +158,19 @@ if __name__ == '__main__':
             pass
     pass
 
-
 [global]
 
-domain = http://so.gushiwen.org
+domain = http://www.blog.com
 
 [db]
 name = acticle.db
 
 [url]
-a = div.sons > p > a
-in = /view
+a = div.content-desc a
+in = 91
 
 [field]
-
-title = div.cont > h1 
-content = div.cont > div.contson
-other_1 = div.cont > p.source
+title = div.detail-title > span
+content = div.detail-content
+other_1 = li
+other_1_index = 2
