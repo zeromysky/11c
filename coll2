@@ -1,0 +1,156 @@
+#-*-coding:utf-8-*-
+
+import sys,os,shutil,re,time
+import argparse
+import ConfigParser 
+from lib import *
+from sql import *
+
+from lxml.cssselect import CSSSelector
+from lxml.etree import fromstring
+import lxml.html
+import HTMLParser
+
+'''
+python collect.py  -i 4 -t 1 -u "http://www.blog.com/index.php/blog/detail/8.html" 
+
+python collect.py  -i 3 -t 1 -u "http://www.blog.com/index.php/blog/index.html?category=1&page=1"
+
+'''
+
+
+if __name__ == '__main__':
+    param = [
+      ['-i','--step',int,'this is step'],
+      ['-t','--test',int,'this is test'],
+      ['-u','--url',str,'this is url']
+    ]
+    cmd_param = get_cmd_param(param)
+
+    print cmd_param
+
+    step = cmd_param['step']
+    test = cmd_param['test']
+    _url  = cmd_param['url']
+
+    config = get_config('./conf.ini')
+    print config
+    db_name = config['db']['name']
+    # 连接数据库
+    conn = sqlite.connect(os.path.abspath(db_name))
+    if step == 1:
+        #创建数据库
+        print 'step 1 - start'
+        create_acticle_db(conn)
+        print 'step 1 - ok'
+    elif step == 2:
+        #初始化 文章地址列表
+        print 'step 2 - start'
+        with open(os.path.abspath('urls.txt')) as f:
+             acticle_urls = f.read()
+        acticle_urls_list =  acticle_urls.split('\n')
+        print acticle_urls_list
+        print len(acticle_urls_list)
+        init_acticle_url(conn,acticle_urls_list)
+        print 'step 2 - ok'
+    elif step == 3:
+        if test == 1:
+            print _url
+            html_content = http_get(_url)
+            html_content = html_content.decode('utf-8','ignore')
+            html_content = lxml.html.fromstring(html_content)
+            tag_a_content = html_content.cssselect(config['url']['a'])
+            target_urls = []
+            for tag_a in tag_a_content:
+                tag_a_href = tag_a.get("href")
+                detail_url = ''
+                if tag_a_href.find('http://') > -1:
+                    detail_url = tag_a_href
+                else:
+                    detail_url = config['global']['domain'] + tag_a_href
+                if detail_url.find(config['url']['in'])>-1:
+                    target_urls.append(detail_url)
+                pass
+            target_urls = set(target_urls)
+            for x in target_urls:
+                print x
+                pass
+
+            pass
+    elif step == 4:
+        if test==1:
+            print _url
+            html_content = http_get(_url)
+            html_content = html_content.decode('utf-8','ignore')
+            html_content = lxml.html.fromstring(html_content)
+            for field in config['field']:
+                print field
+                tag_content_list = html_content.cssselect(config['field'][field])
+                if len(tag_content_list)>0:
+                    tag_content = tag_content_list[0]
+                    tag_html_contnet = lxml.html.tostring(tag_content)
+                    print HTMLParser.HTMLParser().unescape(tag_html_contnet).encode('utf-8','ignore')
+                    # print tag_content.text_content().encode('utf-8','ignore')
+                pass
+            pass
+    elif step == 5:
+        #开始
+        article_urls = get_acticle_url(conn)
+        for _url in article_urls:
+            print 'urls: '+_url
+            html_content = http_get(_url)
+            html_content = html_content.decode('utf-8','ignore')
+            html_content = lxml.html.fromstring(html_content)
+            tag_a_content = html_content.cssselect(config['url']['a'])
+            target_urls = []
+            for tag_a in tag_a_content:
+                tag_a_href = tag_a.get("href")
+                detail_url = ''
+                if tag_a_href.find('http://') > -1:
+                    detail_url = tag_a_href
+                else:
+                    detail_url = config['global']['domain'] + tag_a_href
+                if detail_url.find(config['url']['in'])>-1:
+                    target_urls.append(detail_url)
+                pass
+            time.sleep(1)
+            target_urls = set(target_urls)
+            for x_detail_url in target_urls:
+                print 'url: '+x_detail_url
+                acticle_html_content = http_get(x_detail_url)
+                acticle_html_content = acticle_html_content.decode('utf-8','ignore')
+                acticle_html_content = lxml.html.fromstring(acticle_html_content)
+                sql_data = {'url':x_detail_url} 
+                for field in config['field']:
+                    tag_content_list = acticle_html_content.cssselect(config['field'][field])
+                    if len(tag_content_list)>0:
+                        tag_content = tag_content_list[0]
+                        tag_html_contnet = lxml.html.tostring(tag_content)
+                        field_value = HTMLParser.HTMLParser().unescape(tag_html_contnet)
+                        # .encode('utf-8','ignore')
+                        # print tag_content.text_content().encode('utf-8','ignore')
+                        sql_data[field] = field_value
+                    pass
+                add_acticle(conn,sql_data)
+                time.sleep(2)
+                pass
+            pass
+    pass
+
+
+[global]
+
+domain = http://so.gushiwen.org
+
+[db]
+name = acticle.db
+
+[url]
+a = div.sons > p > a
+in = /view
+
+[field]
+
+title = div.cont > h1 
+content = div.cont > div.contson
+other_1 = div.cont > p.source
