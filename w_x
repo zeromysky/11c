@@ -1,0 +1,175 @@
+// 发送菜单到微信
+function send_menu() {
+
+	$token = $_SESSION['token'];
+	$member_id = $_SESSION['member_id'];
+
+	$Dao = new Mysql();
+
+	$sql = "select app_id,app_secret from member where public_id='{$token}'";
+	$memberInfo = $Dao->query($sql);
+
+	$appid = $memberInfo[0]['app_id'];
+	$secret = $memberInfo[0]['app_secret'];
+
+
+	$sql = "select * from public_menu where token='{$token}' and status=1 ";
+	$publicMenu = $Dao->query($sql);
+	$publicMenu = list_to_tree($publicMenu);
+
+	file_put_contents('10.txt', json_encode($publicMenu));
+
+	$button = array();
+	foreach ($publicMenu as $key => $menu) {
+		//主菜单
+		if( empty($menu['_child']) ){
+			$btn = array();
+
+			if($menu['type']==0){//关键字
+				$btn['type'] = 'click';
+				$btn['key']  =  $menu['value'];
+			}elseif($menu['type']==1){//连接
+				$btn['type'] = 'view';
+				$btn['url']  =  $menu['value'];
+			}
+
+			$btn['name'] = $menu['title'];
+		}else{
+			//子菜单
+			unset($vo);
+			$btn = array('name'=>$menu['title']);
+			$btn['sub_button'] = array();
+
+			foreach ($menu['_child'] as $key => $vo) {
+				$_btn = array();
+
+				if($vo['type']==0){//关键字
+					$_btn['type'] = 'click';
+					$_btn['key']  =  $vo['value'];
+				}elseif($vo['type']==1){//连接
+					$_btn['type'] = 'view';
+					$_btn['url']  =  $vo['value'];
+				}
+
+				$_btn['name'] = $vo['title'];
+				$btn['sub_button'][] = $_btn;
+			}
+
+			
+			
+		}
+
+		
+		$button['button'][] = $btn;
+
+	}
+
+	$tree = json_encode_cn ( $button );
+
+	// $map ['token'] = get_token ();
+	// $info = M ( 'member_public' )->where ( $map )->find ();
+
+
+	//access_token
+	$url_get = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $appid . '&secret=' . $secret;
+
+	$ch1 = curl_init ();
+	$timeout = 5;
+	curl_setopt ( $ch1, CURLOPT_URL, $url_get );
+	curl_setopt ( $ch1, CURLOPT_RETURNTRANSFER, 1 );
+	curl_setopt ( $ch1, CURLOPT_CONNECTTIMEOUT, $timeout );
+	curl_setopt ( $ch1, CURLOPT_SSL_VERIFYPEER, FALSE );
+	curl_setopt ( $ch1, CURLOPT_SSL_VERIFYHOST, false );
+	$accesstxt = curl_exec ( $ch1 );
+	curl_close ( $ch1 );
+	$access = json_decode ( $accesstxt, true );
+	if (empty ( $access ['access_token'] )) {
+		//log
+	}
+	//删除所有 菜单
+	file_get_contents ( 'https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=' . $access ['access_token'] );
+
+
+
+	//发送菜单
+	$url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . $access ['access_token'];
+	$header [] = "content-type: application/x-www-form-urlencoded; charset=UTF-8";
+
+	$ch = curl_init ();
+	curl_setopt ( $ch, CURLOPT_URL, $url );
+	curl_setopt ( $ch, CURLOPT_CUSTOMREQUEST, "POST" );
+	curl_setopt ( $ch, CURLOPT_SSL_VERIFYPEER, FALSE );
+	curl_setopt ( $ch, CURLOPT_SSL_VERIFYHOST, FALSE );
+	curl_setopt ( $ch, CURLOPT_HTTPHEADER, $header );
+	curl_setopt ( $ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; MSIE 5.01; Windows NT 5.0)' );
+	curl_setopt ( $ch, CURLOPT_FOLLOWLOCATION, 1 );
+	curl_setopt ( $ch, CURLOPT_AUTOREFERER, 1 );
+	curl_setopt ( $ch, CURLOPT_POSTFIELDS, $tree );
+	curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, true );
+	$res = curl_exec ( $ch );
+	curl_close ( $ch );
+	$res = json_decode ( $res, true );
+	if ($res ['errcode'] == 0) {
+		dump('发送菜单成功');
+	} else {
+		dump('发送菜单失败，错误的返回码是：' . $res ['errcode'] . ', 错误的提示是：' . $res ['errmsg']);
+	}
+}
+
+
+function json_encode_cn($data) {
+	$data = json_encode ( $data );
+	return preg_replace ( "/\\\u([0-9a-f]{4})/ie", "iconv('UCS-2BE', 'UTF-8', pack('H*', '$1'));", $data );
+}
+
+
+//网页授权
+	public function auth(){
+ 
+		//可以直接在微信上点
+		$code_url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".$this->login_url."&response_type=code&scope=snsapi_userinfo&state=1&connect_redirect=1#wechat_redirect";
+	
+		$errorCorrectionLevel = "L";
+		 
+		$matrixPointSize = "5";
+
+		header("location: ".$code_url);
+
+	}
+
+
+	
+
+	public function login(){
+
+
+		$code = $_REQUEST['code'];
+
+		$url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=".$this->appid."&secret=".$this->secret."&code=".$code."&grant_type=authorization_code";
+	
+		$res = http($url);
+	
+		$resArr = (array)json_decode($res);
+		
+
+		$openid = $resArr['openid'];
+		if(empty($openid)) exit('获取用户失败！');
+
+		//是否已经注册
+		$userModel = $this->_model("user");
+		$userInfo = $userModel->getInfoByOpenId($openid,$select="*");
+		if(empty($userInfo)){
+			$email = $openid;
+			$ext_info = json_encode_cn(array('xingming'=>"微信用户"));
+			$user_id = $userModel->addUser($username,$email,$phone,'','',$ext_info,1);
+		}else{
+			$user_id = $userInfo['id'];
+		}
+
+		A("publicx")->loginUpdate($user_id);
+
+		$returnUrl = $_SESSION['WX_URL'];
+
+		redirect($returnUrl,1);exit;
+	
+	}
