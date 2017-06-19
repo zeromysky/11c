@@ -1,0 +1,4 @@
+
+
+-数据库 替换 \r\n
+REPLACE(REPLACE(REPLACE(zptxt,CHAR(13),'\n'),CHAR(10),'\n'),CHAR(9),'\t')
