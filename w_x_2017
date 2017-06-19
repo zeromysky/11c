@@ -1,0 +1,108 @@
+
+-微信服务公众号
+
+2017-06-19
+
+access_token 获取
+
+1 客户端获取
+基本配置 =》IP白名单 
+2 js 网页获取 access_token 微信支付时用 ，其他地方有些不支持
+接口权限 =》网页授权 =》网页授权域名
+
+
+
+微信支付回调，post的参数
+
+https://pay.weixin.qq.com/wiki/doc/api/jsapi.php?chapter=9_1
+
+<xml><appid><![CDATA[wx0c293be2aa3f0e7e]]></appid>
+<bank_type><![CDATA[CFT]]></bank_type>
+<cash_fee><![CDATA[1]]></cash_fee>
+<fee_type><![CDATA[CNY]]></fee_type>
+<is_subscribe><![CDATA[N]]></is_subscribe>
+<mch_id><![CDATA[1232505002]]></mch_id>
+<nonce_str><![CDATA[67b48b8708bda7398473ccc77d48aade]]></nonce_str>
+<openid><![CDATA[ooooooppppppeeeeeennnnnniiidddd]]></openid>
+<out_trade_no><![CDATA[po2oactivity1611497606345175]]></out_trade_no>
+<result_code><![CDATA[SUCCESS]]></result_code>
+<return_code><![CDATA[SUCCESS]]></return_code>
+<sign><![CDATA[B24D0B605975462A36AD3F8B0A68A700]]></sign>
+<time_end><![CDATA[20170616174609]]></time_end>
+<total_fee>1</total_fee>
+<trade_type><![CDATA[APP]]></trade_type>
+<transaction_id><![CDATA[4006652001201706166001647527]]></transaction_id>
+</xml>
+
+
+模板推送
+
+// {{first.DATA}}
+// 活动名称：{{keyword1.DATA}}
+// 活动时间：{{keyword2.DATA}}
+// 活动地点：{{keyword3.DATA}}
+// {{remark.DATA}}
+
+$template_id = 'OPENTM206165287';
+$url = "http://www.baidu.com";
+$data = array(
+	'first'=>array('value'=>'点我查看报名电子票','color'=>'#173177'),
+	'keyword1'=>array('value'=>'国际人才交流大会','color'=>'#173177'),
+	'keyword2'=>array('value'=>'07/07 13:00','color'=>'#173177'),
+	'keyword3'=>array('value'=>'南山区数字技术园b栋304','color'=>'#173177'),
+);
+print_r($data);
+sendMsgTemplate($access_token,$openid,$template_id,$url,$data);
+
+#模板ID获取
+function getTemplateId($access_token,$template_id_short){
+	$data = array('template_id_short'=>$template_id_short);
+	$url = "https://api.weixin.qq.com/cgi-bin/template/api_add_template?access_token={$access_token}";
+	$data = json_encode($data);
+	print_r($url);
+	print_r($data);
+	$res = (array)json_decode(socketRequest($url,$data));
+	print_r($res);
+	if($res['errmsg']=='ok'){
+		return $res['template_id'];
+	}else{
+		return -1;
+	}
+}
+
+
+#模板推送
+function sendMsgTemplate($access_token,$touser,$template_id_short,$url,$data,$topcolor="#FFFFFF"){
+	echo "<pre>";
+	print_r(1);
+	$template_id = getTemplateId($access_token,$template_id_short);
+	if($template_id==-1 || empty($template_id)){
+		return ;
+	}
+	$unionId = getUnionID($access_token,$touser);
+	$touser = $unionId;
+	print_r('---------------');
+	print_r($touser);
+	$template = array(
+		'touser'=>$touser,
+		'template_id'=>$template_id,
+		'url'=>$url,
+		'topcolor'=>$topcolor,
+		'data'=>$data,
+		"access_token"=>$access_token
+	);
+	
+	print_r(2);
+	$template = json_encode($template);
+	print_r($template);
+	$to_url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={$access_token}";
+	print_r($to_url);
+	$res = socketRequest($to_url,$template);
+	print_r(3);
+	print_r($res);
+	if ($dataRes['errcode'] == 0) {
+       return true;
+    } else {
+        return false;
+    }
+}
