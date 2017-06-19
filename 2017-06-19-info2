@@ -1,0 +1,379 @@
+
+
+-数据库 替换 \r\n
+REPLACE(REPLACE(REPLACE(zptxt,CHAR(13),'\n'),CHAR(10),'\n'),CHAR(9),'\t')
+
+-python 设计模式
+http://www.cnblogs.com/wuyuegb2312/archive/2013/04/09/3008320.html
+
+
+状态模式
+
+class State:
+    def WirteProgram(self):
+        pass
+
+class Work:
+    def __init__(self):
+        self.hour = 9
+        self.current = ForenoonState()
+    def SetState(self,temp):
+        self.current = temp
+    def WriteProgram(self):
+        self.current.WriteProgram(self)
+
+class NoonState(State):
+    def WriteProgram(self,w):
+        print "noon working"
+        if (w.hour<13):
+            print "fun."
+        else:
+            print "need to rest."
+
+class ForenoonState(State):
+    def WriteProgram(self,w):
+        if (w.hour<12):
+            print "morning working"
+            print "energetic"
+        else:
+            w.SetState(NoonState())        
+            w.WriteProgram()
+
+if __name__ == "__main__":
+    mywork = Work()
+    mywork.hour = 9
+    mywork.WriteProgram()
+    mywork.hour =14
+    mywork.WriteProgram()
+
+
+#coding=utf-8
+class StateMachine:
+    def __init__(self): 
+        self.handlers = {}        # 状态转移函数字典
+        self.startState = None    # 初始状态
+        self.endStates = []       # 最终状态集合
+    
+    # 参数name为状态名,handler为状态转移函数,end_state表明是否为最终状态
+    def add_state(self, name, handler, end_state=0):
+        name = name.upper() # 转换为大写
+        self.handlers[name] = handler
+        if end_state:
+            self.endStates.append(name)
+
+    def set_start(self, name):
+        self.startState = name.upper()
+
+    def run(self, cargo):
+        try:
+            handler = self.handlers[self.startState]
+        except:
+            raise InitializationError("must call .set_start() before .run()")
+        if not self.endStates:
+            raise  InitializationError("at least one state must be an end_state")
+        
+        # 从Start状态开始进行处理
+        while True: 
+            (newState, cargo) = handler(cargo)     # 经过状态转移函数变换到新状态
+            if newState.upper() in self.endStates: # 如果跳到终止状态,则打印状态并结束循环
+                print("reached ", newState)
+                break 
+            else:                        # 否则将转移函数切换为新状态下的转移函数 
+                handler = self.handlers[newState.upper()]
+
+
+
+# 有限状态集合
+positive_adjectives = ["great","super", "fun", "entertaining", "easy"]
+negative_adjectives = ["boring", "difficult", "ugly", "bad"]
+
+# 自定义状态转变函数
+def start_transitions(txt):
+    # 过指定分隔符对字符串进行切片,默认为空格分割,参数num指定分割次数
+    # 将"Python is XXX"语句分割为"Python"和之后的"is XXX"
+    splitted_txt = txt.split(None, 1)  
+    word, txt = splitted_txt if len(splitted_txt) > 1 else (txt,"")
+    if word == "Python":   
+        newState = "Python_state" # 如果第一个词是Python则可转换到"Python状态"
+    else:
+        newState = "error_state"  # 如果第一个词不是Python则进入终止状态
+    return (newState, txt)        # 返回新状态和余下的语句txt
+
+def python_state_transitions(txt):
+    splitted_txt = txt.split(None,1)
+    word, txt = splitted_txt if len(splitted_txt) > 1 else (txt,"")
+    if word == "is":
+        newState = "is_state"
+    else:
+        newState = "error_state"
+    return (newState, txt)
+
+def is_state_transitions(txt):
+    splitted_txt = txt.split(None,1)
+    word, txt = splitted_txt if len(splitted_txt) > 1 else (txt,"")
+    if word == "not":
+        newState = "not_state"
+    elif word in positive_adjectives:
+        newState = "pos_state"
+    elif word in negative_adjectives:
+        newState = "neg_state"
+    else:
+        newState = "error_state"
+    return (newState, txt)
+
+def not_state_transitions(txt):
+    splitted_txt = txt.split(None,1)
+    word, txt = splitted_txt if len(splitted_txt) > 1 else (txt,"")
+    if word in positive_adjectives:
+        newState = "neg_state"
+    elif word in negative_adjectives:
+        newState = "pos_state"
+    else:
+        newState = "error_state"
+    return (newState, txt)
+
+
+
+if __name__== "__main__":
+    m = StateMachine()
+    m.add_state("Start", start_transitions)      # 添加初始状态
+    m.add_state("Python_state", python_state_transitions)
+    m.add_state("is_state", is_state_transitions)
+    m.add_state("not_state", not_state_transitions)
+    m.add_state("neg_state", None, end_state=1)  # 添加最终状态
+    m.add_state("pos_state", None, end_state=1)
+    m.add_state("error_state", None, end_state=1)
+    
+    m.set_start("Start") # 设置开始状态
+    m.run("Python is great")
+    m.run("Python is not fun")
+    m.run("Perl is ugly")
+    m.run("Pythoniseasy")
+
+
+
+
+
+===
+
+
+# -*- coding: utf-8 -*-
+
+
+
+#单继承时super()和__init__()实现的功能是类似的
+'''
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'creat A ',
+        Base.__init__(self)
+class childB(Base):
+    def __init__(self):
+        print 'creat B ',
+        super(childB, self).__init__()
+base = Base()
+a = childA()
+b = childB()
+'''
+#super()可以避免重复调用
+'''
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'enter A '
+        Base.__init__(self)
+        print 'leave A'
+class childB(childA, Base):
+    def __init__(self):
+        childA.__init__(self)
+        Base.__init__(self)
+
+b = childB()
+
+
+class Base(object):
+    def __init__(self):
+        print 'Base create'
+class childA(Base):
+    def __init__(self):
+        print 'enter A '
+        super(childA, self).__init__()
+        print 'leave A'
+class childB(childA, Base):
+    def __init__(self):
+        super(childB, self).__init__()
+b = childB()
+print b.__class__.mro()
+
+'''
+
+#super 执行顺序
+'''
+class A(object):
+    def __init__(self):
+        print 'A __init__'
+        super(A, self).__init__()
+        print 'leave A'
+
+class C(object):
+    def __init__(self):
+        print 'C __init__'
+        super(C, self).__init__()
+        print 'leave C'
+
+class B(A,C):
+    def __init__(self):
+        print 'B __init__'
+        super(B, self).__init__()
+        print 'leave B'
+
+class D(B):
+    def __init__(self):
+        print 'D __init__'
+        super(D, self).__init__()
+        print 'leave D'
+
+if __name__ == '__main__':
+    D()
+'''
+
+class A(object):
+    name = None
+    def __init__(self,name):
+        print 'A __init__'
+        super(A, self).__init__()
+        print 'leave A'
+        self.name = name
+
+class D(A):
+    def __init__(self,name):
+        print 'D __init__'
+        super(D, self).__init__(name)
+        print 'leave D'
+        print self.name
+
+if __name__ == '__main__':
+    D('xiaobai')
+
+
+分别创建了foo.py和bar.py
+
+foo.py
+
+def main():
+    print(__name__)
+
+bar.py
+
+import importlib
+
+def dynamic_import(module):
+    return importlib.import_module(module)
+
+
+if __name__ == "__main__":
+    module = dynamic_import('foo')
+    module.main()
+
+    module2 = dynamic_import('bar')
+    module2.main()
+
+foo
+bar
+
+
+Python系统运维常用库
+http://www.cnblogs.com/liuwt0911/p/5814492.html
+
+
+《python自动化运维：技术与最佳实践》书中示例及案例源码 
+https://github.com/yorkoliu/pyauto
+
+
+FTP地址：ftp://ftp1.linuxidc.com
+
+用户名：ftp1.linuxidc.com
+
+密码：www.linuxidc.com
+
+ftp://ftp1.linuxidc.com/2016年LinuxIDC.com/10月/Python自动化运维：技术与最佳实践 PDF高清完整版/Python自动化运维：技术与最佳实践 PDF高清完整版.7z
+
+
+/------
+python
+-------/
+
+
+装饰器（Decorator）
+
+装饰器是一个可调用对象（a callable），在Python中，函数是对象，当然也是可调用的，
+所以装饰器可以是一个函数，我们称其为函数装饰器。
+
+这个可调用对象以一个函数作为参数，闭且返回另一个函数（来替换参数那个函数）。
+
+class Student(object):
+
+    @property
+    def score(self):
+        return self._score
+
+    @score.setter
+    def score(self, value):
+        if not isinstance(value, int):
+            raise ValueError('score must be an integer!')
+        if value < 0 or value > 100:
+            raise ValueError('score must between 0 ~ 100!')
+        self._score = value
+
+>>> s = Student()
+>>> s.score = 60 # OK，实际转化为s.set_score(60)
+>>> s.score # OK，实际转化为s.get_score()
+60
+>>> s.score = 9999
+Traceback (most recent call last):
+  ...
+ValueError: score must between 0 ~ 100!
+
+class C(object):
+    def __init__(self):
+        self._x = None
+
+    @property
+    def x(self):
+        """I'm the 'x' property."""
+        return self._x
+
+    @x.setter
+    def x(self, value):
+        self._x = value
+
+    @x.deleter
+    def x(self):
+        del self._x
+
+
+
+
+def decorator(F):
+    def new_F(a, b):
+        print("input", a, b)
+        return F(a, b)
+    return new_F
+
+# get square sum
+@decorator
+def square_sum(a, b):
+    return a**2 + b**2
+
+# get square diff
+@decorator
+def square_diff(a, b):
+    return a**2 - b**2
+
+print(square_sum(3, 4))
+print(square_diff(3, 4))
