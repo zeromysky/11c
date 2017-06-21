@@ -1,0 +1,32 @@
+#!/usr/bin/python  
+# -*- coding: utf-8 -*-  
+
+import re  
+import urllib  
+
+  
+def getHtml(url):  
+    page = urllib.urlopen(url)  
+    html = page.read()  
+    return html  
+  
+def getImg(html):  
+    reg = r'data-src="(.+?\.jpg)"'  
+    imgre = re.compile(reg)  
+    imglist = imgre.findall(html)
+    print imglist  
+    x = 0  
+    for imgurl in imglist:  
+        print imgurl
+        urllib.urlretrieve(imgurl,'./%s.jpg' % x)  
+
+        # f=open(r"D:"+'/'+str(x)+'.jpg','wb')  
+        # req= urllib.urlopen(imgurl)
+        # buf=req.read()  
+        # f.write(buf)  
+        x = x + 1          
+     
+html = getHtml("http://baike.baidu.com/item/%E9%AB%98%E5%90%9B%E5%AE%87")  
+getImg(html)  
+
+
