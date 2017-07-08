@@ -1,0 +1,90 @@
+【开源项目展示】
+http://demo.nlpcn.org/resource/list/2
+
+ansj
+
+源码 https://github.com/NLPchina/elasticsearch-analysis-ansj
+
+文档 http://nlpchina.github.io/ansj_seg/
+
+
+redis pub/sub  发布/订阅
+
+http://www.redis.cn/topics/pubsub.html
+http://quietmadman.blog.51cto.com/3269500/1380325/
+
+http://doc.redisfans.com/pub_sub/index.html
+
+#blog
+https://my.oschina.net/qiangzigege/blog/278495
+
+#查看es 插件
+curl -XGET 'http://127.0.0.1:9200/_cat/plugins?pretty'
+
+
+#节点信息
+curl -XGET 'http://127.0.0.1:9200/_nodes?pretty'
+#mapping
+curl -XGET 'http://127.0.0.1:9200/test/_mapping?pretty'
+
+
+1.x
+注意 es 对接 ansj 的配置格式
+#测试
+ansj_index
+ansj_query
+curl -XGET 'http://127.0.0.1:9200/test/_analyze?analyzer=ansj_query&pretty=true' -d'中华人民' 
+
+
+2.x
+
+#测试
+index_ansj
+query_ansj
+dic_ansj
+curl 'http://127.0.0.1:9200/test/_analyze?analyzer=query_ansj&pretty=true' -d'中华人民共和' 	
+
+
+http://127.0.0.1:9200/test/test/_search?q=name:%E4%B8%AD%E5%9B%BD
+
+
+"ansj" : {
+  "redis" : {
+    "pool" : {
+      "testonborrow" : "true",
+      "maxwait" : "100",
+      "maxactive" : "20",
+      "maxidle" : "10"
+    },
+    "channel" : "ansj_term",
+    "timeout" : "2000",
+    "ip" : "192.168.60.221:6379"
+  },
+  "enabled_stop_filter" : "true",
+  "enable_num_recognition" : "true",
+  "enable_name_recognition" : "true",
+  "ambiguity_path" : "ansj/dic/ambiguity.dic",
+  "enable_skip_user_define" : "false",
+  "enable_quantifier_recognition" : "false",
+  "stop_path" : "ansj/dic/stopLibrary.dic",
+  "dic_path" : "ansj/dic/user/"
+},
+
+
+#端口
+netstat -apn | grep 6379
+
+redis-cli
+
+publish ansj_term u:c:中华人民
+publish ansj_term u:d:中华人民
+publish ansj_term u:c:中华
+publish ansj_term u:d:中华
+publish ansj_term u:c:中华人
+
+SUBSCRIBE ansj_term
+
+
+redis-cli
+publish ansj_term a:c:中华人民-中华人,n,民,n
+publish ansj_term a:d:中华人民
